@@ -1,36 +1,56 @@
 from flask import Flask, request, jsonify
 from googlesearch import search
-from bs4 import BeautifulSoup as bs
+from bs4 import BeautifulSoup
 import requests
 import google.generativeai as genai
 
 app = Flask(__name__)
 
 
-# Function to extract image URL from Google search results
-def extract_image_url(search_query):
-    search_results = search(search_query, num=10, stop=10, pause=2)
+# Function to perform Google Search
+def google_search(query):
+    try:
+        # Include both common and scientific names in the search query
+        search_query = f"{query} bird {query.split()[0]}"
+        search_results = list(search(search_query, num=1, stop=1))
 
-    for url in search_results:
-        html = requests.get(url, timeout=30)
-        soup = bs(html.content, 'html.parser')
-        img_tags = soup.find_all('img')
-        for img_tag in img_tags:
-            img_url = img_tag.get('src')
-            if img_url and img_url.startswith('http'):
-                return img_url
-    return None
+        if search_results:
+            first_result = search_results[0]
+            title = first_result
+            link = first_result
+            return [{'title': title, 'link': link}]
+        else:
+            return []
+    except Exception as e:
+        print(f"Error in Google Search: {e}")
+        return []
 
+def get_wikipedia_info(bird_name):
+    try:
+        # Perform a Google search to find the Wikipedia page for the bird
+        google_results = google_search(bird_name)
+        wiki_link = google_results[0]['link'] if google_results else None
 
+        if wiki_link:
+            response = requests.get(wiki_link)
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Extract image URL
+            img_tag = soup.find('meta', {'property': 'og:image'})
+            image_url = img_tag['content'] if img_tag else None
+
+            return {'image_url': image_url}
+        else:
+            return {'image_url': None}
+    except Exception as e:
+        print(f"Error getting Wikipedia information: {e}")
+        return {'image_url': None}
+
+    
 # Function to perform Google Image Search for the bird
-def google_image_search(bird_name):
-    search_query = f"{bird_name} bird HD"
-    return extract_image_url(search_query)
-
-# Function to get information using Gemini
 def get_gemini_info(query):
     # Replace 'YOUR_API_KEY' with your actual Google API key
-    genai.configure(api_key="AIzaSyCDB2nPeHI_Csv9lmsfSH6UK91l-jVXQMc    ")
+    genai.configure(api_key="AIzaSyCDB2nPeHI_Csv9lmsfSH6UK91l-jVXQMc")
 
     # Initialize a GenerativeModel instance with 'gemini-pro' model
     model = genai.GenerativeModel('gemini-pro')
@@ -43,6 +63,8 @@ def get_gemini_info(query):
 
     return {'summary': limited_response}  # Assuming Gemini does not return image URLs
 
+
+
 # Define a route for handling bird information
 @app.route('/bird_info', methods=['POST'])
 def get_bird_info():
@@ -54,7 +76,7 @@ def get_bird_info():
         return jsonify({'message': 'Only enter the name of the bird'}), 400
 
     # Perform Google Image Search for the bird
-    bird_image_url = google_image_search(input_bird_name)
+    bird_image_url = get_wikipedia_info(input_bird_name)
     print(f"Image URL: {bird_image_url}")
 
     if bird_image_url:
