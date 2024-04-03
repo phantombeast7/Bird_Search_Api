@@ -6,7 +6,6 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-
 # Function to perform Google Search
 def google_search(query):
     try:
@@ -56,7 +55,7 @@ def get_gemini_info(query):
     model = genai.GenerativeModel('gemini-pro')
 
     # Generate content using Gemini
-    response = model.generate_content(f"Summary of {query} bird in 150 words.")
+    response = model.generate_content(f"Generate a summary about the {query} bird in 150 words.and if this is not a bird then dont mention 'bird' in the summary and if it is bird then mention 'bird' in the summary and only accept real birds")
 
     # Limit the response to approximately 150 words
     limited_response = ' '.join(response.text.split()[:150])
@@ -73,17 +72,16 @@ def get_bird_info():
     # Check if the input is a bird name using Gemini
     gemini_info = get_gemini_info(input_bird_name)
     if "bird" not in gemini_info['summary'].lower():
-        return jsonify({'message': 'Only enter the name of the bird'}), 400
+        return jsonify({'message': 'Please enter the name of a bird.'}), 400
 
     # Perform Google Image Search for the bird
-    bird_image_url = get_wikipedia_info(input_bird_name)
+    bird_image_url = get_wikipedia_info(input_bird_name)['image_url']
     print(f"Image URL: {bird_image_url}")
 
     if bird_image_url:
         return jsonify({'bird_name': input_bird_name, 'summary': gemini_info['summary'], 'image_url': bird_image_url}), 200
-
     else:
-        return jsonify({'message': 'No HD image found for the given bird name'}), 404
+        return jsonify({'message': 'No HD image found for the given bird name.'}), 404
 
 if __name__ == '__main__':
     app.run(debug=False, port=8080)  # Run the app on port 8080
