@@ -6,45 +6,43 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Function to perform Google Search
-def google_search(query):
+def get_wikimedia_image(query):
     try:
-        # Include both common and scientific names in the search query
-        search_query = f"{query} bird {query.split()[0]}"
-        search_results = list(search(search_query, num=1, stop=1))
+        # Base URL for Wikimedia Commons API
+        base_url = "https://commons.wikimedia.org/w/api.php"
 
-        if search_results:
-            first_result = search_results[0]
-            title = first_result
-            link = first_result
-            return [{'title': title, 'link': link}]
-        else:
-            return []
-    except Exception as e:
-        print(f"Error in Google Search: {e}")
-        return []
+        # Parameters for the API request
+        params = {
+            "action": "query",
+            "format": "json",
+            "prop": "imageinfo",
+            "generator": "search",
+            "gsrsearch": f"{query} bird",
+            "gsrnamespace": "6",  # Namespace for images in Wikimedia Commons
+            "gsrlimit": "1",  # Limiting to one result
+            "iiurlwidth": "200",  # Image width
+            "iiurlheight": "150",  # Image height
+            "iiprop": "url",  # Properties to include in the image info
+        }
 
-def get_wikipedia_info(bird_name):
-    try:
-        # Perform a Google search to find the Wikipedia page for the bird
-        google_results = google_search(bird_name)
-        wiki_link = google_results[0]['link'] if google_results else None
+        # Make the API request
+        response = requests.get(base_url, params=params)
+        data = response.json()
 
-        if wiki_link:
-            response = requests.get(wiki_link)
-            soup = BeautifulSoup(response.text, 'html.parser')
+        # Check if there are any results
+        if "query" in data and "pages" in data["query"]:
+            pages = data["query"]["pages"]
+            if pages:
+                page_id = next(iter(pages))
+                image_info = pages[page_id]["imageinfo"][0]
+                image_url = image_info["url"]
+                return {'image_url': image_url}
 
-            # Extract image URL
-            img_tag = soup.find('meta', {'property': 'og:image'})
-            image_url = img_tag['content'] if img_tag else None
-
-            return {'image_url': image_url}
-        else:
-            return {'image_url': None}
-    except Exception as e:
-        print(f"Error getting Wikipedia information: {e}")
         return {'image_url': None}
-
+    except Exception as e:
+        print(f"Error getting Wikimedia image: {e}")
+        return {'image_url': None}
+        
     
 # Function to perform Google Image Search for the bird
 def get_gemini_info(query):
@@ -74,9 +72,10 @@ def get_bird_info():
     if "bird" not in gemini_info['summary'].lower():
         return jsonify({'message': 'Please enter the name of a bird.'}), 400
 
-    # Perform Google Image Search for the bird
-    bird_image_url = get_wikipedia_info(input_bird_name)['image_url']
-    print(f"Image URL: {bird_image_url}")
+
+    bird_image_url = get_wikimedia_image(predicted_species)
+    bird_image_url = bird_image_url['image_url']
+    print(f"\nBird image url: {bird_image_url}")
 
     if bird_image_url:
         return jsonify({'bird_name': input_bird_name, 'summary': gemini_info['summary'], 'image_url': bird_image_url}), 200
