@@ -73,7 +73,7 @@ def get_bird_info():
         return jsonify({'message': 'Please enter the name of a bird.'}), 400
 
 
-    bird_image_url = get_wikimedia_image(predicted_species)
+    bird_image_url = get_wikimedia_image(input_bird_name)
     bird_image_url = bird_image_url['image_url']
     print(f"\nBird image url: {bird_image_url}")
 
