@@ -48,7 +48,7 @@ def get_wikimedia_image(query):
 # Function to perform Google Image Search for the bird
 def get_gemini_info(query):
     # Replace 'YOUR_API_KEY' with your actual Google API key
-    genai.configure(api_key="AIzaSyD97cclI9EAgdEaFzlDP00tQCGflTsi5n8")
+    genai.configure(api_key="Gemini_api")
 
     # Initialize a GenerativeModel instance with 'gemini-pro' model
     model = genai.GenerativeModel('gemini-pro')
